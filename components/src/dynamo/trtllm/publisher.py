@@ -800,6 +800,16 @@ class Publisher:
 
     def _handle_kv_event(self, event):
         logging.debug(f"KV cache event received: {event}")
+        data = event.get("data", {})
+        logging.info(
+            "[KVP2P-TRACE][PUBLISHER] kv_event: type=%s event_id=%s "
+            "block_count=%s cache_levels=%s",
+            data.get("type"),
+            event.get("event_id"),
+            len(data.get("blocks", [])) if data.get("type") == "stored" else "n/a",
+            list({int(b.get("cache_level", 0)) for b in data.get("blocks", [])})
+            if data.get("type") == "stored" else "n/a",
+        )
         # drop the events that is not emitted from the global attention layer.
         if self.should_drop_event(event):
             return
@@ -961,6 +971,11 @@ class Publisher:
                 return  # no tier transition payload -> nothing to do
             old_level = int(cache_level_diff["old_value"])
             new_level = int(cache_level_diff["new_value"])
+            logging.info(
+                "[KVP2P-TRACE][PUBLISHER] tier_transition: block_hash=%s "
+                "old_level=%d new_level=%d dp_rank=%d",
+                block_hash, old_level, new_level, attention_dp_rank,
+            )
             if old_level == new_level:
                 return
             meta = self._block_metadata.get(block_hash)
@@ -1054,16 +1069,17 @@ class Publisher:
         """
         if not block_hashes:
             return
-        import logging as _lg
-        _lg.getLogger(__name__).warning(
-            'PROBE dispatch_stored: tier=%s parent=%s hashes=%s ntok=%s',
+        logging.info(
+            '[KVP2P-TRACE][PUBLISHER] dispatch_stored: tier=%s parent=%s '
+            'hashes=%s ntok=%s dp_rank=%s',
             storage_tier, parent_hash, block_hashes, num_block_tokens,
+            attention_dp_rank,
         )
         if self.zmq_kv_event_publisher:
             if storage_tier != "device":
                 logging.warning(
-                    "Dropping non-device BlockStored event under ZMQ "
-                    "consolidator path (schema does not yet carry tier). "
+                    "[KVP2P-TRACE][PUBLISHER] ZMQ_DROP: non-device BlockStored "
+                    "event dropped — ZMQ consolidator schema does not carry tier. "
                     f"tier={storage_tier} hashes={block_hashes}"
                 )
                 return

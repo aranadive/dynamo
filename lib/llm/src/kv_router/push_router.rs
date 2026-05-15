@@ -461,6 +461,13 @@ impl KvPushRouter {
             );
         }
 
+        tracing::info!(
+            target: "kvp2p_trace",
+            pinned_worker = pinned_worker_id,
+            dp_rank = effective_dp_rank,
+            overlap_blocks = overlap_blocks,
+            "[KVP2P-TRACE][FRONTEND] plan_skipped: pinned_worker routing bypasses plan generation"
+        );
         Ok(WorkerSelection {
             instance_id: pinned_worker_id,
             dp_rank: effective_dp_rank,

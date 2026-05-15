@@ -1108,6 +1108,21 @@ class HandlerBase(BaseGenerativeHandler):
         remote_g2_plan = (request.get("extra_args") or {}).get(
             REMOTE_KV_REUSE_PLAN_EXTRA_ARGS_KEY
         )
+        if remote_g2_plan is not None:
+            logger.info(
+                "[KVP2P-TRACE][HANDLER] plan_extracted: plan_id=%s "
+                "source_worker=%s planned_blocks=%s tier=%s",
+                remote_g2_plan.get("plan_id"),
+                remote_g2_plan.get("source_worker_id"),
+                remote_g2_plan.get("planned_prefix_blocks"),
+                remote_g2_plan.get("source_tier"),
+            )
+        else:
+            _extra = request.get("extra_args")
+            logger.info(
+                "[KVP2P-TRACE][HANDLER] no_plan: extra_args_keys=%s",
+                list(_extra.keys()) if isinstance(_extra, dict) else type(_extra).__name__ if _extra else "None",
+            )
 
         try:
             # NEW: Updated engine call to include multimodal data

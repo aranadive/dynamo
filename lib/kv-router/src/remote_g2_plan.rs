@@ -107,6 +107,11 @@ pub fn select_remote_g2_reuse_plan(
         .lower_tier
         .get(&StorageTier::HostPinned)
     else {
+        tracing::info!(
+            target: "kvp2p_trace",
+            request_id = %input.request_id,
+            "[KVP2P-TRACE][ROUTER] no_host_pinned_tier_in_matches"
+        );
         return RemoteKvReuseDecision::NoPlan {
             reason: RemoteKvReuseNoPlanReason::NoRemoteG2Candidate,
             stats,
@@ -135,12 +140,21 @@ pub fn select_remote_g2_reuse_plan(
     }
 
     let Some((source, hits)) = best else {
+        let reason = if saw_remote_candidate {
+            RemoteKvReuseNoPlanReason::NoContiguousPrefix
+        } else {
+            RemoteKvReuseNoPlanReason::NoRemoteG2Candidate
+        };
+        tracing::info!(
+            target: "kvp2p_trace",
+            request_id = %input.request_id,
+            reason = ?reason,
+            saw_remote_candidate = saw_remote_candidate,
+            rejected_g1 = stats.rejected_g1_candidates,
+            "[KVP2P-TRACE][ROUTER] plan_rejected"
+        );
         return RemoteKvReuseDecision::NoPlan {
-            reason: if saw_remote_candidate {
-                RemoteKvReuseNoPlanReason::NoContiguousPrefix
-            } else {
-                RemoteKvReuseNoPlanReason::NoRemoteG2Candidate
-            },
+            reason,
             stats,
         };
     };
@@ -174,12 +188,28 @@ pub fn select_remote_g2_reuse_plan(
     }
     let end = start + planned_prefix_blocks as usize;
 
+    let plan_id = format!(
+        "remote-g2:{}:{}:{}:{}",
+        input.request_id, source.worker_id, source.dp_rank, input.created_at_ms
+    );
+    tracing::info!(
+        target: "kvp2p_trace",
+        request_id = %input.request_id,
+        plan_id = %plan_id,
+        source_worker = source.worker_id,
+        source_dp_rank = source.dp_rank,
+        target_worker = input.target.worker_id,
+        target_dp_rank = input.target.dp_rank,
+        planned_blocks = planned_prefix_blocks,
+        device_match = device_match,
+        hits = hits,
+        start = start,
+        end = end,
+        "[KVP2P-TRACE][ROUTER] plan_generated"
+    );
     RemoteKvReuseDecision::Plan {
         plan: RemoteKvReusePlan {
-            plan_id: format!(
-                "remote-g2:{}:{}:{}:{}",
-                input.request_id, source.worker_id, source.dp_rank, input.created_at_ms
-            ),
+            plan_id,
             request_id: input.request_id.to_string(),
             target_worker_id: input.target.worker_id,
             target_dp_rank: input.target.dp_rank,

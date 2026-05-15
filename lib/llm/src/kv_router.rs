@@ -146,11 +146,21 @@ pub(crate) fn attach_remote_kv_reuse_decision(
             if request.attach_remote_kv_reuse_plan(plan).is_ok() {
                 return Ok(());
             }
+            tracing::warn!(
+                target: "kvp2p_trace",
+                plan_id = %plan.plan_id,
+                "[KVP2P-TRACE][FRONTEND] plan_serialization_failed"
+            );
             request.attach_remote_kv_reuse_no_plan_reason(
                 RemoteKvReuseNoPlanReason::SerializationFailed,
             )
         }
         RemoteKvReuseDecision::NoPlan { reason, .. } => {
+            tracing::info!(
+                target: "kvp2p_trace",
+                reason = ?reason,
+                "[KVP2P-TRACE][FRONTEND] no_plan_attached"
+            );
             request.attach_remote_kv_reuse_no_plan_reason(reason.clone())
         }
     }

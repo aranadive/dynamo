@@ -264,6 +264,15 @@ impl PreprocessedRequest {
         &mut self,
         plan: &RemoteKvReusePlan,
     ) -> serde_json::Result<()> {
+        tracing::info!(
+            target: "kvp2p_trace",
+            plan_id = %plan.plan_id,
+            source_worker = plan.source_worker_id,
+            target_worker = plan.target_worker_id,
+            planned_blocks = plan.planned_prefix_blocks,
+            source_tier = ?plan.source_tier,
+            "[KVP2P-TRACE][FRONTEND] plan_attached"
+        );
         let plan_value = serde_json::to_value(plan)?;
         let mut map = extra_args_object(self.extra_args.take());
         map.remove(REMOTE_KV_REUSE_NO_PLAN_REASON_EXTRA_ARGS_KEY);
